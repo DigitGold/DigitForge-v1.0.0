@@ -1,10 +1,15 @@
-import React from 'react';
+'use client';
+import React, { useEffect } from 'react';
 import { useLayers } from '../../contexts/LayersContext';
 import { generateNFTs } from '../../utils/nftGenerator';
 import JSZip from 'jszip';
 
 const TestGenerationButton: React.FC = () => {
-  const { layers } = useLayers(); // 🧠 Important : appel ici pour que `layers` existe
+  const { layers } = useLayers(); // 🧠 Important : appel ici
+
+  useEffect(() => {
+    console.log("✅ Component TestGenerationButton monté côté client");
+  }, []);
 
   console.log("✅ useLayers chargé :", typeof useLayers);
   console.log("✅ JSZip chargé :", typeof JSZip);

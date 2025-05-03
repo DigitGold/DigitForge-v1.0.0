@@ -90,6 +90,7 @@ export async function generateNFTs(
   const numberOfNFTs = options.previewMode ? Math.min(5, options.numberOfNFTs) : options.numberOfNFTs;
 
   for (let i = 0; i < numberOfNFTs; i++) {
+    console.log(`🎨 Génération NFT ${i + 1}/${numberOfNFTs}`);  
     let combination = generateCombination();
     let dna = combinationToDNA(combination);
 
@@ -105,8 +106,9 @@ export async function generateNFTs(
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const item of combination) {
       try {
-        console.log("Chargement layer :", item.image);
+        console.log("📥 Tentative de chargement image :", item.image);
         const img = await loadImage(item.image);
+        console.log("✅ Image chargée avec succès :", item.image);
         ctx.drawImage(img, 0, 0, width, height);
       } catch (error) {
         console.warn("Erreur lors du chargement du layer, skipping:", item.image, error);
@@ -114,7 +116,15 @@ export async function generateNFTs(
       }
     }
 
-    const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), 'image/png'));
+    console.log("🖼️ Canvas prêt ➜ export PNG...");
+      const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), 'image/png'));
+
+      if (!blob) {
+        console.error("❌ Erreur critique : canvas.toBlob() a renvoyé null !");
+        throw new Error("Erreur : le canvas n’a pas pu être converti en image PNG.");
+      }
+
+      console.log("📦 PNG généré avec succès.");
 
     const imageName = `${dna.formatted}.png`;
     const arrayBuffer = await blob.arrayBuffer();

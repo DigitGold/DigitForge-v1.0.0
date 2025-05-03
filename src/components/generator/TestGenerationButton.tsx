@@ -4,14 +4,17 @@ import { generateNFTs } from '../../utils/nftGenerator';
 import JSZip from 'jszip';
 
 const TestGenerationButton: React.FC = () => {
-  const { layers } = useLayers(); // Accès au contexte global
+  const { layers } = useLayers(); // 🧠 Important : appel ici pour que `layers` existe
+
+  console.log("✅ useLayers chargé :", typeof useLayers);
+  console.log("✅ JSZip chargé :", typeof JSZip);
+  console.log("📊 Layers actuels dans le contexte :", layers);
 
   const handleTestGeneration = async () => {
     console.log("🧪 Lancement test génération avec layers :", layers);
 
-    // ⚠️ Validation en amont
     if (!layers.length || layers.some(layer => !layer.items.length)) {
-      alert("Aucun layer valide détecté. Veuillez importer des images dans au moins un layer.");
+      alert("⚠️ Aucun layer valide détecté. Veuillez importer des images dans au moins un layer.");
       return;
     }
 
@@ -19,7 +22,7 @@ const TestGenerationButton: React.FC = () => {
       const { zip } = await generateNFTs(layers, {
         width: 600,
         height: 1000,
-        numberOfNFTs: 5, // Test rapide
+        numberOfNFTs: 5,
         includeMetadata: true,
         previewMode: true,
         enforceUniqueness: true,
@@ -37,6 +40,8 @@ const TestGenerationButton: React.FC = () => {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+
+      console.log("✅ Génération et téléchargement ZIP terminés.");
     } catch (error) {
       console.error("❌ Erreur lors de la génération :", error);
       alert("Erreur lors de la génération des NFTs. Voir console pour les détails.");

@@ -1,8 +1,8 @@
 import JSZip from "jszip";
 
 interface LayerItem {
-  id: string; // 4 chiffres (ex: '1284')
-  image: string; // Base64 ou URL local
+  id: string;
+  image: string;
   weight: number;
 }
 
@@ -31,31 +31,34 @@ export async function generateNFTs(
 ): Promise<{ zip: JSZip, rarityReport: Record<string, Record<string, number>> }> {
   const zip = new JSZip();
   const imageFolder = zip.folder(options.outputStructure === 'separated' ? 'images' : '');
-  const metadataFolder = options.includeMetadata ? zip.folder(options.outputStructure === 'separated' ? 'metadata' : '') : null;
-  
+  const metadataFolder = options.includeMetadata
+    ? zip.folder(options.outputStructure === 'separated' ? 'metadata' : '')
+    : null;
+
   const width = options.editionMode ? 1200 : options.width;
   const height = options.editionMode ? 2000 : options.height;
   const rarityReport: Record<string, Record<string, number>> = {};
-
   const existingCombinations: string[] = [];
-  
-  // Version sécurisée de loadImage avec timeout
-  const loadImage = (src: string, timeout = 3000): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
+
+  const loadImage = async (src: string, timeout = 3000): Promise<HTMLImageElement | null> => {
+    return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
 
       const timer = setTimeout(() => {
-        reject(new Error(`Timeout: L'image n'a pas chargé en ${timeout}ms ➔ ${src}`));
+        console.warn(`⏱️ Timeout image (non bloquant) ➜ ${src}`);
+        resolve(null);
       }, timeout);
 
       img.onload = () => {
         clearTimeout(timer);
         resolve(img);
       };
-      img.onerror = (err) => {
+
+      img.onerror = () => {
         clearTimeout(timer);
-        reject(new Error(`Erreur lors du chargement de l'image ➔ ${src}`));
+        console.warn(`❌ Échec chargement image (non bloquant) ➜ ${src}`);
+        resolve(null);
       };
 
       img.src = src;
@@ -87,10 +90,13 @@ export async function generateNFTs(
   canvas.width = width;
   canvas.height = height;
 
-  const numberOfNFTs = options.previewMode ? Math.min(5, options.numberOfNFTs) : options.numberOfNFTs;
+  const numberOfNFTs = options.previewMode
+    ? Math.min(5, options.numberOfNFTs)
+    : options.numberOfNFTs;
 
   for (let i = 0; i < numberOfNFTs; i++) {
-    console.log(`🎨 Génération NFT ${i + 1}/${numberOfNFTs}`);  
+    console.log(`🎨 Génération NFT ${i + 1}/${numberOfNFTs}`);
+
     let combination = generateCombination();
     let dna = combinationToDNA(combination);
 
@@ -102,35 +108,35 @@ export async function generateNFTs(
       existingCombinations.push(dna.raw);
     }
 
-    // Draw image
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     for (const item of combination) {
-      try {
-        console.log("📥 Tentative de chargement image :", item.image);
-        const img = await loadImage(item.image);
+      console.log("📥 Tentative de chargement image :", item.image);
+      const img = await loadImage(item.image);
+      if (img) {
         console.log("✅ Image chargée avec succès :", item.image);
         ctx.drawImage(img, 0, 0, width, height);
-      } catch (error) {
-        console.warn("Erreur lors du chargement du layer, skipping:", item.image, error);
-        // On saute ce layer si problème
+      } else {
+        console.warn("⚠️ Image ignorée (non chargée) :", item.image);
       }
     }
 
     console.log("🖼️ Canvas prêt ➜ export PNG...");
-      const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), 'image/png'));
+    const blob = await new Promise<Blob>(resolve =>
+      canvas.toBlob(blob => resolve(blob!), 'image/png')
+    );
 
-      if (!blob) {
-        console.error("❌ Erreur critique : canvas.toBlob() a renvoyé null !");
-        throw new Error("Erreur : le canvas n’a pas pu être converti en image PNG.");
-      }
+    if (!blob) {
+      console.error("❌ Erreur critique : canvas.toBlob() a renvoyé null !");
+      throw new Error("Erreur : le canvas n’a pas pu être converti en image PNG.");
+    }
 
-      console.log("📦 PNG généré avec succès.");
+    console.log("📦 PNG généré avec succès.");
 
     const imageName = `${dna.formatted}.png`;
     const arrayBuffer = await blob.arrayBuffer();
     imageFolder?.file(imageName, arrayBuffer);
 
-    // Build metadata
     if (metadataFolder) {
       const attributes = layers.map((layer, index) => ({
         trait_type: layer.name,
@@ -150,7 +156,6 @@ export async function generateNFTs(
       metadataFolder.file(`${dna.formatted}.json`, JSON.stringify(metadata, null, 2));
     }
 
-    // Update rarity report
     layers.forEach((layer, index) => {
       const traitName = layer.name;
       const value = combination[index].id;

@@ -4,10 +4,10 @@ import { Settings, Zap, Info } from 'lucide-react';
 
 const CollectionConfig: React.FC = () => {
   const { collectionConfig, updateCollectionConfig, generateCollection, isGenerating, layers } = useLayers();
-  
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const { checked } = e.target as HTMLInputElement;
       updateCollectionConfig({ [name]: checked });
@@ -17,19 +17,19 @@ const CollectionConfig: React.FC = () => {
       updateCollectionConfig({ [name]: value });
     }
   };
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     generateCollection();
   };
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Collection Configuration</h2>
         <Settings className="h-6 w-6 text-primary-500" />
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
@@ -48,7 +48,7 @@ const CollectionConfig: React.FC = () => {
                 required
               />
             </div>
-            
+
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
                 Collection Description
@@ -84,7 +84,7 @@ const CollectionConfig: React.FC = () => {
               </p>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <div>
               <label htmlFor="size" className="block text-sm font-medium text-gray-300 mb-1">
@@ -105,7 +105,7 @@ const CollectionConfig: React.FC = () => {
                 Number of unique NFTs to generate
               </p>
             </div>
-            
+
             <div className="flex items-center mt-4">
               <input
                 type="checkbox"
@@ -121,7 +121,7 @@ const CollectionConfig: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="card p-4 bg-forge-light border border-gray-600">
           <h3 className="font-medium mb-2">Generation Summary</h3>
           <ul className="text-sm text-gray-300 space-y-1">
@@ -131,7 +131,7 @@ const CollectionConfig: React.FC = () => {
             <li>Metadata: {collectionConfig.includeRarity ? 'With rarity attributes' : 'Basic attributes only'}</li>
           </ul>
         </div>
-        
+
         <div className="flex justify-end">
           <button
             type="submit"
@@ -146,7 +146,7 @@ const CollectionConfig: React.FC = () => {
             ) : (
               <>
                 <Zap className="mr-2 h-5 w-5" />
-                Generate Collection
+                Lancer la génération complète
               </>
             )}
           </button>

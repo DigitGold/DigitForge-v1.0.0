@@ -31,9 +31,7 @@ export async function generateNFTs(
 ): Promise<{ zip: JSZip, rarityReport: Record<string, Record<string, number>> }> {
   const zip = new JSZip();
   const imageFolder = zip.folder(options.outputStructure === 'separated' ? 'images' : '');
-  const metadataFolder = options.includeMetadata
-    ? zip.folder(options.outputStructure === 'separated' ? 'metadata' : '')
-    : null;
+  const metadataFolder = options.includeMetadata ? zip.folder(options.outputStructure === 'separated' ? 'metadata' : '') : null;
 
   const width = options.editionMode ? 1200 : options.width;
   const height = options.editionMode ? 2000 : options.height;
@@ -65,6 +63,16 @@ export async function generateNFTs(
     });
   };
 
+  const slugifyImageName = (item: LayerItem): string => {
+    try {
+      const url = new URL(item.image);
+      const base = url.pathname.split('/').pop()?.replace(/\.[^/.]+$/, '') || item.id;
+      return base.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    } catch {
+      return item.id.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    }
+  };
+
   const generateCombination = () => {
     return layers.map(layer => {
       const totalWeight = layer.items.reduce((acc, item) => acc + item.weight, 0);
@@ -77,99 +85,64 @@ export async function generateNFTs(
     });
   };
 
-  const combinationToDNA = (combination: LayerItem[]) => {
-    const ids = combination.map(item => (item.id || '').toString().substring(0, 4));
-    return {
-      formatted: ids.join('-'),
-      raw: ids.join('')
-    };
-  };
-
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
   canvas.width = width;
   canvas.height = height;
 
-  const numberOfNFTs = options.previewMode
-    ? Math.min(5, options.numberOfNFTs)
-    : options.numberOfNFTs;
+  const numberOfNFTs = options.previewMode ? Math.min(5, options.numberOfNFTs) : options.numberOfNFTs;
 
   for (let i = 0; i < numberOfNFTs; i++) {
-    console.log(`🎨 Génération NFT ${i + 1}/${numberOfNFTs}`);
-
     let combination = generateCombination();
-    let dna = combinationToDNA(combination);
+    const compactName = combination.map(slugifyImageName).join('-');
+    const dnaRaw = combination.map(item => item.id).join('');
 
     if (options.enforceUniqueness) {
-      while (existingCombinations.includes(dna.raw)) {
+      while (existingCombinations.includes(dnaRaw)) {
         combination = generateCombination();
-        dna = combinationToDNA(combination);
       }
-      existingCombinations.push(dna.raw);
+      existingCombinations.push(dnaRaw);
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     for (const item of combination) {
-      console.log("📥 Tentative de chargement image :", item.image);
       const img = await loadImage(item.image);
-      if (img) {
-        console.log("✅ Image chargée avec succès :", item.image);
-        ctx.drawImage(img, 0, 0, width, height);
-      } else {
-        console.warn("⚠️ Image ignorée (non chargée) :", item.image);
-      }
+      if (img) ctx.drawImage(img, 0, 0, width, height);
     }
 
-    console.log("🖼️ Canvas prêt ➜ export PNG...");
-    const blob = await new Promise<Blob>(resolve =>
-      canvas.toBlob(blob => resolve(blob!), 'image/png')
-    );
+    const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), 'image/png'));
+    if (!blob) throw new Error("Erreur : canvas.toBlob() a échoué");
 
-    if (!blob) {
-      console.error("❌ Erreur critique : canvas.toBlob() a renvoyé null !");
-      throw new Error("Erreur : le canvas n’a pas pu être converti en image PNG.");
-    }
-
-    console.log("📦 PNG généré avec succès.");
-
-    const imageName = `${dna.formatted}.png`;
     const arrayBuffer = await blob.arrayBuffer();
-    imageFolder?.file(imageName, arrayBuffer);
+    imageFolder?.file(`${compactName}.png`, arrayBuffer);
 
     if (metadataFolder) {
       const attributes = layers.map((layer, index) => ({
         trait_type: layer.name,
-        value: combination[index].id
+        value: slugifyImageName(combination[index])
       }));
 
       const metadata = {
-        name: dna.formatted,
+        name: compactName,
         description: 'Une collection DigitForge NFT',
         image: "ipfs://TO_BE_FILLED",
-        dna: dna.formatted,
-        raw_dna: dna.raw,
+        dna: compactName,
+        raw_dna: dnaRaw,
         edition: options.editionMode ? "Collector" : "Standard",
         attributes
       };
 
-      metadataFolder.file(`${dna.formatted}.json`, JSON.stringify(metadata, null, 2));
+      metadataFolder.file(`${compactName}.json`, JSON.stringify(metadata, null, 2));
     }
 
     layers.forEach((layer, index) => {
       const traitName = layer.name;
       const value = combination[index].id;
-      if (!rarityReport[traitName]) {
-        rarityReport[traitName] = {};
-      }
-      if (!rarityReport[traitName][value]) {
-        rarityReport[traitName][value] = 0;
-      }
-      rarityReport[traitName][value]++;
+      rarityReport[traitName] = rarityReport[traitName] || {};
+      rarityReport[traitName][value] = (rarityReport[traitName][value] || 0) + 1;
     });
   }
 
   zip.file('rarity_report.json', JSON.stringify(rarityReport, null, 2));
-
   return { zip, rarityReport };
 }

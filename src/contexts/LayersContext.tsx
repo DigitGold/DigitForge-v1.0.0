@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { generateNFTs } from '../utils/nftGenerator';
 
 export interface LayerItem {
   id: string;
@@ -23,6 +24,13 @@ export interface CollectionConfig {
   size: number;
   includeRarity: boolean;
   inputMode: 'file' | 'manual';
+  width?: number;
+  height?: number;
+  previewMode?: boolean;
+  enforceUniqueness?: boolean;
+  outputStructure?: 'flat' | 'separated';
+  randomizeLayerOrder?: boolean;
+  editionMode?: boolean;
 }
 
 interface LayersContextType {
@@ -47,9 +55,16 @@ interface LayersContextType {
 const defaultCollectionConfig: CollectionConfig = {
   name: 'Ma Collection NFT',
   description: 'Une collection générée avec DigitForge',
-  size: 10,
+  size: 5000,
   includeRarity: true,
-  inputMode: 'file'
+  inputMode: 'file',
+  width: 600,
+  height: 1000,
+  previewMode: false,
+  enforceUniqueness: true,
+  outputStructure: 'flat',
+  randomizeLayerOrder: false,
+  editionMode: false,
 };
 
 const LayersContext = createContext<LayersContextType | undefined>(undefined);
@@ -166,18 +181,13 @@ export const LayersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const generateCollection = async () => {
     if (layers.length === 0) return;
-    
+
     setIsGenerating(true);
-    
+
     try {
-      // Dans une implémentation réelle, ceci combinerait les couches pour créer des images uniques
-      const mockPreviews = Array(Math.min(5, collectionConfig.size))
-        .fill(null)
-        .map(() => layers[0].items[0]?.image || '');
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setPreviewImages(mockPreviews);
+      const { zip } = await generateNFTs(layers, collectionConfig);
+      const sampleImages = layers[0]?.items?.slice(0, 5).map((item) => item.image || '') || [];
+      setPreviewImages(sampleImages);
     } catch (error) {
       console.error("Erreur lors de la génération de la collection:", error);
     } finally {

@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLayers } from '../../contexts/LayersContext';
 import { Settings, Zap, Info } from 'lucide-react';
+import { generateNFTs } from '../../utils/nftGenerator';
+import { saveAs } from 'file-saver';
 
 const CollectionConfig: React.FC = () => {
-  const { collectionConfig, updateCollectionConfig, generateCollection, isGenerating, layers } = useLayers();
+  const { collectionConfig, updateCollectionConfig, isGenerating, layers } = useLayers();
+  const [generating, setGenerating] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -18,9 +21,21 @@ const CollectionConfig: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    generateCollection();
+    setGenerating(true);
+    try {
+      const { zip } = await generateNFTs(layers, {
+        ...collectionConfig,
+        numberOfNFTs: collectionConfig.size, // 👈 TRÈS important !
+      });      
+      const blob = await zip.generateAsync({ type: 'blob' });
+      saveAs(blob, `${collectionConfig.name.replace(/\s+/g, '_')}_nft_collection.zip`);
+    } catch (err) {
+      console.error("Erreur lors de la génération :", err);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
@@ -136,9 +151,9 @@ const CollectionConfig: React.FC = () => {
           <button
             type="submit"
             className="btn-accent flex items-center"
-            disabled={isGenerating || layers.length === 0}
+            disabled={generating || layers.length === 0}
           >
-            {isGenerating ? (
+            {generating ? (
               <>
                 <span className="animate-spin h-5 w-5 mr-2 border-t-2 border-white rounded-full" />
                 Generating...

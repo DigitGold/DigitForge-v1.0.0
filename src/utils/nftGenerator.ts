@@ -38,7 +38,7 @@ export async function generateNFTs(
   const rarityReport: Record<string, Record<string, number>> = {};
   const existingCombinations: string[] = [];
 
-  const loadImage = async (src: string, timeout = 3000): Promise<HTMLImageElement | null> => {
+  const loadImage = async (src: string, timeout = 5000): Promise<HTMLImageElement | null> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -90,7 +90,7 @@ export async function generateNFTs(
   canvas.width = width;
   canvas.height = height;
 
-  const numberOfNFTs = options.previewMode ? Math.min(5, options.numberOfNFTs) : options.numberOfNFTs;
+  const numberOfNFTs = options.numberOfNFTs;
 
   for (let i = 0; i < numberOfNFTs; i++) {
     let combination = generateCombination();

@@ -65,6 +65,7 @@ const defaultCollectionConfig: CollectionConfig = {
   outputStructure: 'flat',
   randomizeLayerOrder: false,
   editionMode: false,
+  includeMetadata: true,
 };
 
 const LayersContext = createContext<LayersContextType | undefined>(undefined);
@@ -186,7 +187,7 @@ export const LayersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     try {
       const { zip } = await generateNFTs(layers, collectionConfig);
-      const sampleImages = layers[0]?.items?.slice(0, 5).map((item) => item.image || '') || [];
+      const sampleImages = layers.flatMap(layer => layer.items.map(item => item.image || '')).slice(0, collectionConfig.size);
       setPreviewImages(sampleImages);
     } catch (error) {
       console.error("Erreur lors de la génération de la collection:", error);

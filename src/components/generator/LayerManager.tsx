@@ -47,64 +47,74 @@ const LayerManager: React.FC = () => {
   const handleFolderSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
-    // Group files by their parent folder
+  
+    console.log("📂 Fichiers sélectionnés :", files);
+  
     const filesByFolder = new Map<string, File[]>();
-    
+  
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const path = file.webkitRelativePath;
       const [folderName] = path.split('/');
-      
+  
       if (!filesByFolder.has(folderName)) {
         filesByFolder.set(folderName, []);
       }
       filesByFolder.get(folderName)?.push(file);
     }
-
-    // Check layer limits
+  
     if (filesByFolder.size > 10) {
       alert('Maximum 10 couches (dossiers) autorisées.');
       return;
     }
-
-    // Process each folder as a layer
+  
     for (const [folderName, folderFiles] of filesByFolder.entries()) {
       if (folderFiles.length > 50) {
         alert(`Le dossier "${folderName}" contient plus de 50 fichiers. Seuls les 50 premiers seront utilisés.`);
         folderFiles.length = 50;
       }
-
-      const layerId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  
+      const layerId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  
+      const imageFiles = folderFiles.filter(file =>
+        /\.(png|jpe?g|gif|webp)$/i.test(file.name)
+      );
+  
+      if (imageFiles.length === 0) {
+        console.warn(`⚠️ Aucun fichier image valide trouvé dans ${folderName}`);
+        continue;
+      }
+  
       const items: LayerItem[] = await Promise.all(
-        folderFiles
-          .filter(file => /\.(png|jpe?g|gif|webp)$/i.test(file.name))
-          .map(async (file, index) => ({
+        imageFiles.map(async (file, index) => {
+          const url = URL.createObjectURL(file);
+          return {
             id: `${layerId}-item-${index}`,
             name: file.name.split('.')[0],
-            image: URL.createObjectURL(file),
+            image: url,
             weight: 100,
             order: index,
-            format: file.name.split('.').pop()?.toLowerCase() || 'unknown'
-          }))
+            format: file.name.split('.').pop()?.toLowerCase() || 'unknown',
+          };
+        })
       );
-
-      if (items.length > 0) {
-        const newLayer: Layer = {
-          id: layerId,
-          name: folderName,
-          type: 'file',
-          items,
-          expanded: true
-        };
-        addLayer(newLayer);
-      }
+  
+      const newLayer: Layer = {
+        id: layerId,
+        name: folderName,
+        type: 'file',
+        items,
+        expanded: true,
+      };
+  
+      console.log("✅ Nouvelle couche prête :", newLayer);
+      addLayer(newLayer);
     }
-
+  
     if (folderInputRef.current) {
       folderInputRef.current.value = '';
     }
-  };
+  }; 
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
